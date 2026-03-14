@@ -1,42 +1,74 @@
 # 🏦 Jameel Finance: Enterprise Data Platform (EDP)
-> **Modern Data Stack:** Airbyte ⮕ Postgres ⮕ dbt ⮕ Airflow ⮕ Power BI
+> **Engineering Pattern:** Medallion Lakehouse Architecture (Bronze/Silver/Gold)
 
-This repository contains the end-to-end transformation logic for Jameel Finance. We have transitioned from a legacy "Full-Refresh" reporting model to a high-governance **Medallion Architecture**, ensuring financial data integrity, auditability, and C-Suite level performance.
+This repository contains the end-to-end transformation logic for Jameel Finance. By moving away from legacy "Full-Refresh" scripts to a governed dbt framework, we ensure 100% auditable financial metrics.
 
 ---
 
-## 🏗️ Architecture Blueprint
+## 🏗️ Technical Architecture Blueprint
 
 ```mermaid
 graph LR
-    subgraph "1. SOURCES"
-        S1[Intellect CRM/LMS]
-        S2[V-Tiger Telesales]
-    end
-
-    subgraph "2. INGESTION (Airbyte)"
-        STG[(Staging Layer)]
-    end
-
-    subgraph "3. TRANSFORMATION (dbt)"
+    %% Orchestration & Quality
+    subgraph Control ["⚡ CONTROL PLANE"]
         direction TB
-        INT[Intermediate: Logic Foundry]
-        CDM[CDM: Normalized Entities]
-        EDW[EDW: History & Snapshots]
+        Airflow((Apache Airflow))
+        DQE{dbt Cloud / DQ Gates}
     end
 
-    subgraph "4. CONSUMPTION"
-        Marts[(Data Marts)]
-        PBI{{Power BI}}
+    %% Data Sources
+    subgraph Sources ["📡 MULTI-SOURCE INGESTION"]
+        direction TB
+        S1[Intellect CRM/LMS - PostgreSQL]
+        S2[V-Tiger - MySQL]
+        S3[Mobile App - Future Streaming]
     end
 
-    S1 & S2 -->|Extract| STG
-    STG -->|Modular Joins| INT
-    INT -->|Normalization| CDM
-    CDM -->|SCD Type 2| EDW
-    EDW -->|Star Schema| Marts
+    %% The Pipeline
+    Sources -->|Airbyte / CDC| BRONZE
+
+    subgraph Warehouse ["💾 DATA STORAGE (Postgres Lakehouse)"]
+        direction TB
+        
+        subgraph BRONZE ["BRONZE: LANDING & STAGING"]
+            STG[Raw Tables: 1-to-1 Mirrors]
+        end
+
+        subgraph SILVER ["SILVER: THE LOGIC FOUNDRY"]
+            INT[Intermediate: Heavy Joins & Unions]
+            CDM[Normalized CDM: Logical Entities]
+        end
+
+        subgraph GOLD ["GOLD: ENTERPRISE WAREHOUSE"]
+            EDW[SCD Type 2 & Snapshots]
+            Marts[Data Marts: Logic-Ready]
+        end
+
+        STG -->|Cleaning| INT
+        INT -->|Modeling| CDM
+        CDM -->|Historization| EDW
+        EDW -->|Semantic Layer| Marts
+    end
+
+    %% Connections
+    Airflow -.-> Sources
+    Airflow -.-> Warehouse
+    DQE -.-> CDM
+    DQE -.-> Marts
+
+    %% Output
+    subgraph Delivery ["📊 CONSUMPTION LAYERS"]
+        PBI{{Power BI: Sales & Collections}}
+        ML{{Python: Early Settlement Pred.}}
+    end
+
     Marts --> PBI
+    Marts --> ML
 
-    style STG fill:#cd7f32,color:#fff
-    style CDM fill:#c0c0c0,color:#000
-    style Marts fill:#ffd700,color:#000
+    %% Style Classes (Making it look professional)
+    classDef bronze fill:#EAD1DC,stroke:#A64D79,stroke-width:2px;
+    classDef silver fill:#D0E2FF,stroke:#0043CE,stroke-width:2px;
+    classDef gold fill:#FFF2CC,stroke:#D6B656,stroke-width:2px;
+    class BRONZE bronze;
+    class SILVER silver;
+    class GOLD gold;
