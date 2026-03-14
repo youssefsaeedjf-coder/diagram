@@ -1,6 +1,17 @@
+# 🏦 Jameel Finance: Enterprise Data Platform Modernization
+
+This repository contains the core architecture and transformation logic for the Jameel Finance Data Warehouse. The platform is designed using a **Medallion Architecture** (Bronze/Silver/Gold) to transform fragmented source data from Intellect (CRM/LMS) and V-Tiger into a high-performance, auditable Enterprise Data Warehouse.
+
+---
+
+## 🏗️ Technical Architecture
+
+This diagram illustrates the end-to-end data lifecycle, from ingestion via Airbyte to specialized Data Marts for C-Suite and Operational stakeholders.
+
+```mermaid
 graph LR
     %% Tool Definitions
-    subgraph Orchestration ["⚡ ORCHESTRATION & QUALITY CONTROL"]
+    subgraph Orchestration ["⚡ ORCHESTRATION & QUALITY"]
         Airflow((Apache Airflow))
         DQE{dbt Tests / DQ Gates}
     end
@@ -30,7 +41,7 @@ graph LR
 
         subgraph GOLD ["GOLD: ENTERPRISE WAREHOUSE"]
             EDW[SCD Type 2 & Historical Snapshots]
-            Marts[Data Marts: Denormalized for PBI]
+            Marts[Data Marts: Logic-Ready]
         end
 
         STG -->|Cleaning| INT
